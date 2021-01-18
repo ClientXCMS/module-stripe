@@ -1,0 +1,50 @@
+{% extends "@admin/layout.twig" %}
+
+{% block title 'Stripe' %}
+{% block body %}
+
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+        
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Paiement Id</th>
+                    <th>User id</th>
+                    <th>Payer Id</th>
+                    <th>Payer Email</th>
+                    <th>Total</th>
+                    <th>Sous total</th>
+                    <th>Tax</th>
+                    <th>Création</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if items is not empty %}
+                {% for item in items %}
+                    <tr>
+                        <td>{{ item.id }}</td>
+                        <td>{{ item.paymentId}}</td>
+                        <td>{{ item.userId }}</td>
+                        <td>{{ item.payerId }}</td>
+                        <td>{{ item.payerEmail }}</td>
+                        <td>{{ item.total }}</td>
+                        <td>{{ item.subtotal }}</td>
+                        <td>{{ item.tax }}</td>
+                        <td>{{ item.createdAt }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="9">Aucun enregistrement trouvé</td>
+                </tr>
+            {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

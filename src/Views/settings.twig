@@ -1,0 +1,12 @@
+<div class="row">
+    <div class="col-md-4 col-lg-4 col-sm-12">
+        {{ field("stripe_key", config('stripe.key'), 'Clée Stripe') }}
+    </div>
+    <div class="col-md-4 col-lg-4 col-sm-12">
+        {{ field("stripe_secret", config('stripe.secret'), 'Secret du client Stripe', {type: 'password'}) }}
+    </div>
+    
+    <div class="col-md-4 col-lg-4 col-sm-12">
+        {{ field("stripe_endsecret", config('stripe.endsecret'), 'Secret du point d\'arrêt Stripe', {type: 'password'}) }}
+    </div>
+</div>

@@ -1,0 +1,10 @@
+
+
+{% block scripts %}
+	<script src="https://js.stripe.com/v3/"></script>
+	<script>
+		var stripe = Stripe('{{ key }}');
+        stripe.redirectToCheckout({sessionId: '{{ session.id }}'})
+	</script>
+{% endblock %}
+Chargement
