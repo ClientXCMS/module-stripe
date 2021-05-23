@@ -1,7 +1,9 @@
 <?php
 namespace App\Stripe\Api;
 
+use App\Shop\Entity\Transaction;
 use App\Stripe\Api\Entity\StripeUser;
+use Exception;
 use Psr\Log\LoggerInterface;
 use Stripe\BalanceTransaction;
 use Stripe\Checkout\Session;
@@ -13,7 +15,8 @@ use Stripe\Stripe as StripeStripe;
 use Stripe\StripeClient;
 use Stripe\Webhook;
 
-class Stripe {
+class Stripe
+{
     /**
      * @var StripeClient
      */
@@ -40,7 +43,7 @@ class Stripe {
 
     const STRIPE_VERSION = "2020-08-27";
 
-    public function __construct($privateKey, $publicKey,$endpointkey, LoggerInterface $logger)
+    public function __construct($privateKey, $publicKey, $endpointkey, LoggerInterface $logger)
     {
         $this->logger = $logger;
         $this->setPrivateKey($privateKey);
@@ -86,26 +89,31 @@ class Stripe {
         return $this->stripe->paymentIntents->retrieve($id);
     }
 
-    public function createPaymentSession(StripeUser $user, $items, array $urls, int $invoice): Session
+    public function createPaymentSession(StripeUser $user, $items, array $urls, Transaction $transaction): Session
     {
-        $session = $this->stripe->checkout->sessions->create([
-            //'customer_email' => $user->getEmail(),
-            'cancel_url' => $urls[1],
-            'success_url' => $urls[0],
-            'mode' => 'payment',
-            'payment_method_types' => [
-                'card',
-            ],
-            
-            'metadata' => [
-                'invoice' => $invoice,
-                'user' => $user->getId()
-            ],
-            'customer' => $user->getStripeId(),
-            'line_items' => $items,
-        ]);
+        try {
 
-        return $session;
+            $session = $this->stripe->checkout->sessions->create([
+                //'customer_email' => $user->getEmail(),
+                'cancel_url' => $urls['cancel'],
+                'success_url' => $urls['return'],
+                'mode' => 'payment',
+                'payment_method_types' => [
+                    'card',
+                ],
+                
+                'metadata' => [
+                    'transaction' => $transaction->getId(),
+                    'user' => $user->getId()
+                ],
+                'customer' => $user->getStripeId(),
+                'line_items' => $items,
+            ]);
+    
+            return $session;
+        } catch (Exception $e){
+            dd($e->getMessage());
+        }
     }
 
     public function getCheckoutSessionFromIntent(string $paymentIntent): Session
@@ -135,12 +143,10 @@ class Stripe {
     {
         $payload = @file_get_contents('php://input');
         try {
-            $webhook = Webhook::constructEvent($payload, $signature, $this->endpointkey);
-        } catch(\UnexpectedValueException | SignatureVerificationException $e) {
+            $webhook = Webhook::constructEvent($payload, $signature, $this->endpointkey, 0);
+        } catch (\UnexpectedValueException | SignatureVerificationException $e) {
             $this->logger->error($e->getMessage());
             throw new \Exception($e->getMessage());
-
-
         }
         return $webhook;
     }
@@ -150,8 +156,8 @@ class Stripe {
     {
         
         if ($endpointkey === null) {
-            $this->logger->error("La clée webhook stripe est nulle.");
-            throw new \Exception("Erreur interne.");
+            $this->logger->error("Endpoint key is null. Please add env STRIPE_ENDPOINT with your key");
+            throw new \Exception("Internal error");
         }
         $this->endpointkey = $endpointkey;
     }
@@ -160,8 +166,8 @@ class Stripe {
     {
         
         if ($publicKey === null) {
-            $this->logger->error("La clée publique stripe est nulle.");
-            throw new \Exception("Erreur interne.");
+            $this->logger->error("public key is null. Please add env STRIPE_PUBLIC with your key.");
+            throw new \Exception("Internal error");
         }
         $this->publicKey = $publicKey;
     }
@@ -169,8 +175,8 @@ class Stripe {
     private function setPrivateKey($privateKey)
     {
         if ($privateKey === null) {
-            $this->logger->error("La clée privée stripe est nulle.");
-            throw new \Exception("Erreur interne.");
+            $this->logger->error("private key is null. Please add env STRIPE_PRIVATE with your key.");
+            throw new \Exception("Internal error");
         }
         $this->privateKey = $privateKey;
         \Stripe\Stripe::setApiKey($privateKey);
@@ -181,5 +187,4 @@ class Stripe {
     {
         StripeStripe::setApiVersion(self::STRIPE_VERSION);
     }
-
 }

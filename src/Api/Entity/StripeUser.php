@@ -3,7 +3,8 @@ namespace App\Stripe\Api\Entity;
 
 use App\Account\User;
 
-class StripeUser extends User {
+class StripeUser extends User
+{
 
     /**
      * @var string

@@ -1,25 +1,12 @@
 <?php
 namespace App\Stripe\Actions;
 
-use App\Stripe\Database\StripeTable;
-use ClientX\Actions\Action;
-use ClientX\Renderer\RendererInterface;
+use ClientX\Actions\Payment\PaymentAdminAction;
 
-class StripeAdminAction extends Action {
+class StripeAdminAction extends PaymentAdminAction
+{
 
-    /**
-     * @var StripeTable
-     */
-    private $table;
-
-    public function __construct(RendererInterface $renderer, StripeTable $table)
-    {
-        $this->renderer = $renderer;
-        $this->table = $table;
-    }
-
-    public function __invoke()
-    {
-        return $this->render('@stripe_admin/index', ['items' => $this->table->findAll()]);
-    }
+    protected $routePrefix = "stripe.admin";
+    protected $moduleName = "Stripe";
+    protected $paymenttype = "stripe";
 }

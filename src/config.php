@@ -5,21 +5,17 @@ use App\Stripe\Api\Stripe;
 use App\Stripe\StripePaymentType;
 use App\Stripe\StripeSettings;
 
-use function ClientX\setting;
 use function DI\add;
 use function DI\autowire;
 use function DI\get;
 
 return [
-    'auth.entity'           => StripeUser::class,
+    'auth.entity'   => StripeUser::class,
     'payments.type' => add(get(StripePaymentType::class)),
-    'stripe.key'    => setting("stripe_key"),
-    'stripe.secret' => setting("stripe_secret"),
-    'stripe.endsecret' => setting('stripe_endsecret'),
     'admin.settings'=> add(get(StripeSettings::class)),
-    'csrf.except'   => add('stripe.webhook'),
+    'csrf.except'   => add(['stripe.webhook']),
     Stripe::class   => autowire()
-        ->constructorParameter('endpointkey', get('stripe.endsecret'))
-        ->constructorParameter('privateKey', get('stripe.secret'))
-        ->constructorParameter('publicKey', get('stripe.key'))
+        ->constructorParameter('endpointkey', $_ENV['STRIPE_ENDPOINT'] ?? null)
+        ->constructorParameter('privateKey', $_ENV['STRIPE_SECRET'] ?? null)
+        ->constructorParameter('publicKey', $_ENV['STRIPE_PUBLIC'] ?? null)
 ];

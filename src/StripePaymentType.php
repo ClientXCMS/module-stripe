@@ -3,7 +3,8 @@ namespace App\Stripe;
 
 use ClientX\Payment\PaymentTypeInterface;
 
-class StripePaymentType implements PaymentTypeInterface {
+class StripePaymentType implements PaymentTypeInterface
+{
 
     public function getName(): string
     {
@@ -12,7 +13,7 @@ class StripePaymentType implements PaymentTypeInterface {
 
     public function getTitle(): ?string
     {
-        return "Stripe (Carte bleu)";
+        return "Stripe (Blue Cart)";
     }
 
     public function getManager(): string
