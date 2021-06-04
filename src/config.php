@@ -12,7 +12,7 @@ use function DI\get;
 return [
     'auth.entity'   => StripeUser::class,
     'payments.type' => add(get(StripePaymentType::class)),
-    'admin.settings'=> add(get(StripeSettings::class)),
+    //'admin.settings'=> add(get(StripeSettings::class)),
     'csrf.except'   => add(['stripe.webhook']),
     Stripe::class   => autowire()
         ->constructorParameter('endpointkey', $_ENV['STRIPE_ENDPOINT'] ?? null)
