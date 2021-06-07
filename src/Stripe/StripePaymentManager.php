@@ -77,7 +77,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
     {
         try {
             /** @var StripeUser */
-            $user = $this->table->findBy('stripe_id', $stripeUser->getStripeId());
+            $user = $this->table->findBy('stripe_id', $stripeUser->getStripeId() ?? "");
             $stripeUser->setStripeId($user->getStripeId());
         } catch (NoRecordException $e) {
             $this->stripe->createCustomer($stripeUser);
