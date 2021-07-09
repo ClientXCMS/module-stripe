@@ -108,19 +108,24 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
                 $this->service->changeState($transaction);
                 $this->service->setReason($transaction);
             } else {
-
                 $this->service->complete($transaction);
                 $this->service->changeState($transaction);
                 return $transaction;
             }
-        } else if ($webhook->type === 'payment_intent.succeeded') {
-            
-            $object = $webhook->data->object;
+        }
+    }
+
+    public function success(Request $request){
+        $params = $request->getServerParams();
+        $signature = $params["HTTP_STRIPE_SIGNATURE"];
+        $webhook = $this->stripe->getWebhook($signature);
+        if ($webhook->type === 'payment_intent.succeeded'){
+        
+            $transaction = $this->service->getLastTransaction();
             $id = $webhook->id;
             $transaction->setTransactionId($id);
             $this->service->updateTransactionId($transaction);
             return $transaction;
-
         }
     }
     
