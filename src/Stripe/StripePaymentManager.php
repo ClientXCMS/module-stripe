@@ -92,7 +92,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
 
     }
 
-    public function test(Transaction $transaction, Request $request, User $user){
+    public function confirm(Transaction $transaction, Request $request, User $user){
         $params = $request->getServerParams();
         $signature = $params["HTTP_STRIPE_SIGNATURE"];
         $webhook = $this->stripe->getWebhook($signature);
@@ -108,11 +108,8 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
                 $this->service->changeState($transaction);
                 $this->service->setReason($transaction);
             } else {
-    
-                if ($this->service->isOrder($transaction)) {
-                    $this->service->confirmOrder($transaction, $user->getId());
-                }
-                $transaction->setState($transaction::COMPLETED);
+
+                $this->service->complete($transaction);
                 $this->service->changeState($transaction);
                 return $transaction;
             }
@@ -124,21 +121,6 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             $this->service->updateTransactionId($transaction);
             return $transaction;
 
-        }
-    }
-
-    public function confirm(Request $request)
-    {
-        $params = $request->getServerParams();
-        $signature = $params["HTTP_STRIPE_SIGNATURE"];
-        $webhook = $this->stripe->getWebhook($signature);
-        if ($webhook->type === 'payment_intent.succeeded') {
-            $transaction = $this->service->getLastTransaction();
-            
-            $object = $webhook->data->object;
-            $id = $object->id;
-            $transaction->setTransactionId($id);
-            $this->service->updateTransactionId($transaction);
         }
     }
     
