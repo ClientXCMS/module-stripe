@@ -79,6 +79,12 @@ class Stripe
         return $this->stripe->customers->retrieve($customerId);
     }
 
+
+    public function checkConnection()
+    {
+        $this->stripe->customers->all(['limit' => 1]);
+    }
+
     public function getInvoice(string $invoice): Invoice
     {
         return $this->stripe->invoices->retrieve($invoice);
