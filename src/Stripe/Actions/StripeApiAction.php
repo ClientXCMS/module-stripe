@@ -21,24 +21,8 @@ class StripeApiAction extends Action
     }
     public function __invoke(ServerRequestInterface $request)
     {
-        $webhook = $this->manager->getWebhook($request->getServerParams()['HTTP_STRIPE_SIGNATURE']);
-        $object = $webhook->data->object;
-        if (empty($object->metadata) === false){
-            
-            $response = $this->manager->confirm($request);
-            return $this->json(['success' => $response instanceof Transaction]);
-        }
-        $id = $object->metadata->transaction;
-
-        $userId = $object->metadata->user;
-        
-        $user = $this->user->find($userId);
-        $transaction = $this->transaction->findTransaction($id);
-        if ($transaction != null && $transaction->getState() === $transaction::PENDING) {
-            $response = $this->manager->test($transaction, $request, $user);
-            return $this->json(['success' => $response instanceof Transaction]);
-        }
-        return $this->json(['error' => true]);
+		$response = $this->manager->confirm($request);
+		return $this->json(['success' => $response instanceof Transaction]);
 
     }
 }
