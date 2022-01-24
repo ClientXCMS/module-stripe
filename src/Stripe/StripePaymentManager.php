@@ -92,55 +92,30 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
 
     }
 
-    public function test(Transaction $transaction, Request $request, User $user){
+    public function confirm(Request $request){
         $params = $request->getServerParams();
         $signature = $params["HTTP_STRIPE_SIGNATURE"];
         $webhook = $this->stripe->getWebhook($signature);
-        if ($webhook->type === 'checkout.session.completed') {
-            $object = $webhook->data->object;
-            $id = $object->id;
-            $transaction->setTransactionId($id);
-            $this->service->updateTransactionId($transaction);
+		$object = $webhook->data->object;
+		$id = $object->metadata->transaction;
+		$transaction = $this->service->findTransaction($id);
+		$id = $object->id;
+		$transaction->setTransactionId($id);
+		$this->service->updateTransactionId($transaction);
 
-            if ($object->payment_status !== "paid") {
-                $transaction->setState($transaction::REFUSED);
-                $transaction->setReason("Stripe error");
-                $this->service->changeState($transaction);
-                $this->service->setReason($transaction);
-            } else {
-    
-                if ($this->service->isOrder($transaction)) {
-                    $this->service->confirmOrder($transaction, $user->getId());
-                }
-                $transaction->setState($transaction::COMPLETED);
-                $this->service->changeState($transaction);
-                return $transaction;
-            }
-        } else if ($webhook->type === 'payment_intent.succeeded') {
-            
-            $object = $webhook->data->object;
-            $id = $webhook->id;
-            $transaction->setTransactionId($id);
-            $this->service->updateTransactionId($transaction);
-            return $transaction;
-
-        }
+		if ($object->payment_status !== "paid") {
+			$transaction->setState($transaction::REFUSED);
+			$transaction->setReason("Stripe error");
+			$this->service->changeState($transaction);
+			$this->service->setReason($transaction);
+			return $transaction;
+		} else {
+			$transaction->setState($transaction::COMPLETED);
+			$this->service->changeState($transaction);
+			return $transaction;
+		}
     }
 
-    public function confirm(Request $request)
-    {
-        $params = $request->getServerParams();
-        $signature = $params["HTTP_STRIPE_SIGNATURE"];
-        $webhook = $this->stripe->getWebhook($signature);
-        if ($webhook->type === 'payment_intent.succeeded') {
-            $transaction = $this->service->getLastTransaction();
-            
-            $object = $webhook->data->object;
-            $id = $object->id;
-            $transaction->setTransactionId($id);
-            $this->service->updateTransactionId($transaction);
-        }
-    }
     
     public function getWebhook(string $signature)
     {
