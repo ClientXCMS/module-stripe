@@ -148,12 +148,7 @@ class Stripe
     public function getWebhook(string $signature)
     {
         $payload = @file_get_contents('php://input');
-        try {
-            $webhook = Webhook::constructEvent($payload, $signature, $this->endpointkey, 0);
-        } catch (\UnexpectedValueException | SignatureVerificationException $e) {
-            $this->logger->error($e->getMessage());
-            throw new \Exception($e->getMessage());
-        }
+        $webhook = Webhook::constructEvent($payload, $signature, $this->endpointkey);
         return $webhook;
     }
 
