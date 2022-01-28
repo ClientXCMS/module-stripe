@@ -59,9 +59,6 @@ class Stripe
      */
     public function createCustomer(StripeUser $user): Customer
     {
-        if ($user->getStripeId()) {
-            return $user;
-        }
         $client = $this->stripe->customers->create([
             'metadata' => [
                 'user_id' => (string) $user->getId(),
