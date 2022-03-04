@@ -77,7 +77,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
     {
         try {
             /** @var StripeUser */
-            $user = $this->table->findBy('stripe_id', $stripeUser->getStripeId() ?? "");
+            $user = $this->table->findBy('stripe_id', json_encode($stripeUser->getStripeId(true)) ?? "");
             $stripeUser->updateStripeId($user->getStripeId());
         } catch (NoRecordException $e) {
             $this->stripe->createCustomer($stripeUser);
@@ -91,30 +91,38 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
     {
     }
 
+    /**
+     * @throws \Exception
+     */
     public function confirm(Request $request)
     {
         $params = $request->getServerParams();
         $signature = $params["HTTP_STRIPE_SIGNATURE"];
         $webhook = $this->stripe->getWebhook($signature);
-        $object = $webhook->data->object;
-        $id = $object->metadata->transaction;
-        $transaction = $this->service->findTransaction($id);
-        $id = $object->id;
-        $transaction->setTransactionId($id);
-        $this->service->updateTransactionId($transaction);
+        if ($webhook->type != 'checkout.session.completed') {
+            return null;
+        }
+        if (isset($webhook->data->object)) {
+            $object = $webhook->data->object;
+            $id = $object->metadata->transaction;
+            $transaction = $this->service->findTransaction($id);
+            $id = $object->id;
+            $transaction->setTransactionId($id);
+            $this->service->updateTransactionId($transaction);
 
-        if ($object->payment_status !== "paid") {
-            $transaction->setState($transaction::REFUSED);
-            $transaction->setReason("Stripe error");
-            $this->service->changeState($transaction);
-            $this->service->setReason($transaction);
+            if ($object->payment_status !== "paid") {
+                $transaction->setState($transaction::REFUSED);
+                $transaction->setReason("Stripe error");
+                $this->service->changeState($transaction);
+                $this->service->setReason($transaction);
 
-            return $transaction;
-        } else {
-            $transaction->setState($transaction::COMPLETED);
-            $this->service->complete($transaction);
-            $this->service->changeState($transaction);
-            return $transaction;
+                return $transaction;
+            } else {
+                $transaction->setState($transaction::COMPLETED);
+                $this->service->complete($transaction);
+                $this->service->changeState($transaction);
+                return $transaction;
+            }
         }
     }
 
