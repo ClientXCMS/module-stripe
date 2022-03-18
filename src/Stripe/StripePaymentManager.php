@@ -79,6 +79,12 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             /** @var StripeUser */
             $user = $this->table->findBy('stripe_id', json_encode($stripeUser->getStripeId(true)) ?? "");
             $stripeUser->updateStripeId($user->getStripeId());
+			if ($stripeUser->getStripeId() == null){
+				$this->stripe->createCustomer($stripeUser);
+				$this->table->update($stripeUser->getId(), [
+					'stripe_id' => json_encode($stripeUser->getStripeId(true))
+				]);
+			}
         } catch (NoRecordException $e) {
             $this->stripe->createCustomer($stripeUser);
             $this->table->update($stripeUser->getId(), [
