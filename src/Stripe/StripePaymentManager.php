@@ -46,20 +46,29 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         if ($user === null) {
             return;
         }
-        $items = collect($transaction->getItems())->map(function (TransactionItem $item) use ($transaction) {
+        
+        //$discounts = collect($transaction->getItems())->filter(function($item) { return $item->price() < 0;})->reduce(function ($i, TransactionItem $item) { return $i + $item->price(); }, 0);
+        $items = collect($transaction->getItems())->filter(function($item) { return $item->price() > 0;})->map(function (TransactionItem $item, $i) use ($transaction) {
+            $discount = 0;
+	    $next = $transaction->getItems()[$i+1] ?? null;
+	    if ($next != null) {
+			if ($next->price() < 0) {
+				$discount = $next->price();
+			}
+	     }
             return [
                 [
                     'price_data' =>
                     [
                         'currency' => $transaction->getCurrency(),
-                        'unit_amount' => round($item->priceWithTax() * 100),
+                        'unit_amount' => round($item->priceWithTax() + $discount) * 100,
                         'product_data' => ["name" => $item->getName()]
                     ],
                     'quantity' => $item->getQuantity(),
                 ]
             ];
         })->toArray();
-
+        
         $user = $this->createStripeUser($this->auth->getUser());
         $session = $this->stripe->createPaymentSession($user, $items, $this->getRedirectsLinks($request, $transaction), $transaction);
         $params = ['session' => $session, 'key' => $this->stripe->getPublicKey()];
@@ -79,12 +88,12 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             /** @var StripeUser */
             $user = $this->table->findBy('stripe_id', json_encode($stripeUser->getStripeId(true)) ?? "");
             $stripeUser->updateStripeId($user->getStripeId());
-			if ($stripeUser->getStripeId() == null){
-				$this->stripe->createCustomer($stripeUser);
-				$this->table->update($stripeUser->getId(), [
-					'stripe_id' => json_encode($stripeUser->getStripeId(true))
-				]);
-			}
+	    if ($stripeUser->getStripeId() == null){
+		$this->stripe->createCustomer($stripeUser);
+		$this->table->update($stripeUser->getId(), [
+			'stripe_id' => json_encode($stripeUser->getStripeId(true))
+		]);
+	    }
         } catch (NoRecordException $e) {
             $this->stripe->createCustomer($stripeUser);
             $this->table->update($stripeUser->getId(), [
