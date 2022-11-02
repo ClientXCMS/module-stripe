@@ -42,8 +42,9 @@ class Stripe
     private $endpointkey;
 
     const STRIPE_VERSION = "2020-08-27";
+    private array $types;
 
-    public function __construct($privateKey, $publicKey, $endpointkey, LoggerInterface $logger)
+    public function __construct($privateKey, $publicKey, $endpointkey, LoggerInterface $logger, string $types)
     {
         $this->logger = $logger;
         $this->setPrivateKey($privateKey);
@@ -52,6 +53,7 @@ class Stripe
         $this->setStripeVersion();
 
         $this->stripe = new StripeClient($privateKey);
+        $this->types = json_decode($types);
     }
 
     /**
@@ -101,9 +103,7 @@ class Stripe
                 'cancel_url' => $urls['cancel'],
                 'success_url' => $urls['return'],
                 'mode' => 'payment',
-                'payment_method_types' => [
-                    'card',
-                ],
+                'payment_method_types' => $this->types,
                 
                 'metadata' => [
                     'transaction' => $transaction->getId(),

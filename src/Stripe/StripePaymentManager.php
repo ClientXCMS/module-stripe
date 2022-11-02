@@ -47,7 +47,6 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             return;
         }
         
-        //$discounts = collect($transaction->getItems())->filter(function($item) { return $item->price() < 0;})->reduce(function ($i, TransactionItem $item) { return $i + $item->price(); }, 0);
         $items = collect($transaction->getItems())->filter(function($item) { return $item->price() > 0;})->map(function (TransactionItem $item, $i) use ($transaction) {
             $discount = 0;
 	    $next = $transaction->getItems()[$i+1] ?? null;
@@ -56,17 +55,16 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
 				$discount = $next->price();
 			}
 	     }
-            return [
+            return
                 [
                     'price_data' =>
                     [
                         'currency' => $transaction->getCurrency(),
-                        'unit_amount' => round($item->priceWithTax() + $discount) * 100,
+                        'unit_amount' => ($item->priceWithTax() + $discount) * 100,
                         'product_data' => ["name" => $item->getName()]
                     ],
                     'quantity' => $item->getQuantity(),
-                ]
-            ];
+                ];
         })->toArray();
         
         $user = $this->createStripeUser($this->auth->getUser());
@@ -77,23 +75,22 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
 
     public function refund(array $items): bool
     {
-        // TODO : Implemente
         return false;
     }
 
 
-    private function createStripeUser(StripeUser $stripeUser)
+    private function createStripeUser(StripeUser $stripeUser): StripeUser
     {
         try {
             /** @var StripeUser */
             $user = $this->table->findBy('stripe_id', json_encode($stripeUser->getStripeId(true)) ?? "");
             $stripeUser->updateStripeId($user->getStripeId());
-	    if ($stripeUser->getStripeId() == null){
-		$this->stripe->createCustomer($stripeUser);
-		$this->table->update($stripeUser->getId(), [
-			'stripe_id' => json_encode($stripeUser->getStripeId(true))
-		]);
-	    }
+            if ($stripeUser->getStripeId() == null){
+                $this->stripe->createCustomer($stripeUser);
+                $this->table->update($stripeUser->getId(), [
+                    'stripe_id' => json_encode($stripeUser->getStripeId(true))
+                ]);
+            }
         } catch (NoRecordException $e) {
             $this->stripe->createCustomer($stripeUser);
             $this->table->update($stripeUser->getId(), [
@@ -135,6 +132,9 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             } else {
                 $transaction->setState($transaction::COMPLETED);
                 $this->service->complete($transaction);
+                foreach ($transaction->getItems() as $item){
+                    $this->service->delivre($item);
+                }
                 $this->service->changeState($transaction);
                 return $transaction;
             }

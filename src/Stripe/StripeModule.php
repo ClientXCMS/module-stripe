@@ -16,6 +16,7 @@ class StripeModule extends Module
 
     public function __construct(Router $router, RendererInterface $renderer, ContainerInterface $container)
     {
+        $container->get(StripePaymentManager::class);
         $renderer->addPath("stripe_admin", __DIR__ . '/Views');
         $router->post('/stripe/api', StripeApiAction::class, 'stripe.webhook');
         if ($container->has('admin.prefix')) {
