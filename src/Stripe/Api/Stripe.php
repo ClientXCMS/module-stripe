@@ -94,12 +94,11 @@ class Stripe
         return $this->stripe->paymentIntents->retrieve($id);
     }
 
-    public function createPaymentSession(StripeUser $user, $items, array $urls, Transaction $transaction): Session
+    public function createPaymentSession(StripeUser $user, $items, array $urls, Transaction $transaction)
     {
         try {
 
             $session = $this->stripe->checkout->sessions->create([
-                //'customer_email' => $user->getEmail(),
                 'cancel_url' => $urls['cancel'],
                 'success_url' => $urls['return'],
                 'mode' => 'payment',
@@ -115,6 +114,10 @@ class Stripe
     
             return $session;
         } catch (Exception $e){
+            if ("No such customer: '$stripeId'" == $e->getMessage()){
+                $this->createCustomer($user);
+                return $user;
+            }
             dd($e->getMessage());
         }
     }

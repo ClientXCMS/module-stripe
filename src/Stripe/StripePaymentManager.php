@@ -15,6 +15,7 @@ use ClientX\Database\NoRecordException;
 use ClientX\Payment\PaymentManagerInterface;
 use ClientX\Renderer\RendererInterface;
 use ClientX\Router;
+use Stripe\Checkout\Session;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 class StripePaymentManager extends AbstractPaymentManager implements PaymentManagerInterface
@@ -49,12 +50,12 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         
         $items = collect($transaction->getItems())->filter(function($item) { return $item->price() > 0;})->map(function (TransactionItem $item, $i) use ($transaction) {
             $discount = 0;
-	    $next = $transaction->getItems()[$i+1] ?? null;
-	    if ($next != null) {
-			if ($next->price() < 0) {
-				$discount = $next->price();
-			}
-	     }
+            $next = $transaction->getItems()[$i+1] ?? null;
+            if ($next != null) {
+                if ($next->price() < 0) {
+                    $discount = $next->price();
+                }
+            }
             return
                 [
                     'price_data' =>
@@ -69,8 +70,16 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         
         $user = $this->createStripeUser($this->auth->getUser());
         $session = $this->stripe->createPaymentSession($user, $items, $this->getRedirectsLinks($request, $transaction), $transaction);
-        $params = ['session' => $session, 'key' => $this->stripe->getPublicKey()];
-        return $this->renderer->render("@stripe_admin/autoredirect", $params);
+        if ($session instanceof Session){
+            $params = ['session' => $session, 'key' => $this->stripe->getPublicKey()];
+            return $this->renderer->render("@stripe_admin/autoredirect", $params);
+        } else {
+            $this->table->update($session->getId(), [
+                'stripe_id' => json_encode($session->getStripeId(true))
+            ]);
+            $params = ['session' => $session, 'key' => $this->stripe->getPublicKey()];
+            return $this->renderer->render("@stripe_admin/autoredirect", $params);
+        }
     }
 
     public function refund(array $items): bool
