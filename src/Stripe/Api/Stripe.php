@@ -114,9 +114,10 @@ class Stripe
     
             return $session;
         } catch (Exception $e){
+			$stripeId = $user->getStripeId();
             if ("No such customer: '$stripeId'" == $e->getMessage()){
                 $this->createCustomer($user);
-                return $user;
+				return $this->createPaymentSession($user, $items, $urls, $transaction);
             }
             dd($e->getMessage());
         }

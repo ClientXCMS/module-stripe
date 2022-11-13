@@ -61,12 +61,13 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
                     'price_data' =>
                     [
                         'currency' => $transaction->getCurrency(),
-                        'unit_amount' => ($item->priceWithTax() + $discount) * 100,
+                        'unit_amount' => number_format($item->priceWithTax() + $discount, 2) * 100,
                         'product_data' => ["name" => $item->getName()]
                     ],
                     'quantity' => $item->getQuantity(),
                 ];
         })->toArray();
+		//dd($items);
         
         $user = $this->createStripeUser($this->auth->getUser());
         $session = $this->stripe->createPaymentSession($user, $items, $this->getRedirectsLinks($request, $transaction), $transaction);
