@@ -4,32 +4,41 @@ namespace App\Stripe;
 
 use App\Auth\Database\UserTable;
 use App\Auth\User;
+use App\Shop\Entity\IncomeSubscriptionDetails;
 use App\Shop\Entity\Product;
 use App\Shop\Entity\Recurring;
 use App\Shop\Entity\SubscriptionDetails;
 use App\Shop\Entity\Transaction;
 use App\Shop\Entity\TransactionItem;
+use App\Shop\Payment\SubscribeInterface;
+use App\Shop\Services\SubscriptionService;
 use App\Stripe\Api\Entity\StripeUser;
 use App\Stripe\Api\Stripe;
+use Carbon\Carbon;
 use ClientX\Database\NoRecordException;
 use ClientX\Renderer\RendererInterface;
-use DateTimeInterface;
 
-class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface
+class StripeSubscriber implements SubscribeInterface
 {
 
     private Stripe $stripe;
     private UserTable $table;
     private RendererInterface $renderer;
+    /**
+     * @var \App\Shop\Services\SubscriptionService
+     */
+    private SubscriptionService $subscriptionService;
 
     public function __construct(
         Stripe $stripe,
         UserTable $table,
-        RendererInterface $renderer
+        RendererInterface $renderer,
+        SubscriptionService $subscriptionService
     ) {
         $this->stripe   = $stripe;
         $this->table    = $table;
         $this->renderer = $renderer;
+        $this->subscriptionService = $subscriptionService;
     }
     public function getLink(User $user, Transaction $transaction, array $links)
     {
@@ -76,7 +85,6 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface
 
     public function cancel(string $token)
     {
-
         return $this->stripe->cancelSubscription($token);
     }
 
@@ -140,5 +148,27 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface
             ]);
         }
         return $stripeUser;
+    }
+
+    public function getDetailsLink(string $token): string
+    {
+        return "https://dashboard.stripe.com/test/subscriptions/$token";
+    }
+
+    public function estimatedIncomeSubscription(int $months = 0): IncomeSubscriptionDetails
+    {
+
+        $income = (new IncomeSubscriptionDetails())->setType($this->type());
+        $subscriptions = $this->subscriptionService->getSubscriptionForType('stripe');
+        $currentMonth = Carbon::now()->addMonths($months)->format('m');
+        foreach ($subscriptions as $subscription){
+            $details = $this->stripe->getSubscription($subscription->token);
+            if ($details->status == 'active' && Carbon::createFromTimestamp($details->current_period_end)->format('m') == $currentMonth){
+                $income->addAmount($details->items->data[0]->plan->amount_decimal / 100);
+                $income->addNextRenewal($subscription->token,Carbon::createFromTimestamp(Carbon::createFromTimestamp($details->current_period_end))->toDate());
+                $income->addInterval($subscription->token,$details->items->data[0]->plan->interval_count);
+            }
+        }
+        return $income;
     }
 }
