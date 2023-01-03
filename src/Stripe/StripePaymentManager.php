@@ -59,7 +59,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         $links =  $this->getRedirectsLinks($request, $transaction);
 
         if ($this->checkIfTransactionCanSubscribe($transaction)) {
-            return (new StripeSubscriber($this->stripe, $this->table, $this->renderer))->getLink($user, $transaction, $links);
+            return (new StripeSubscriber($this->stripe, $this->table, $this->renderer, $this->subscriptionService))->getLink($user, $transaction, $links);
         }
 
         $items = collect($transaction->getItems())->filter(function ($item) {
