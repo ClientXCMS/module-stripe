@@ -3,6 +3,7 @@ namespace App\Stripe;
 
 use App\Stripe\Actions\StripeAdminAction;
 use App\Stripe\Actions\StripeApiAction;
+use App\Stripe\Api\Stripe;
 use ClientX\Module;
 use ClientX\Renderer\RendererInterface;
 use ClientX\Router;

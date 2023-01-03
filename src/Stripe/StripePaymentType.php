@@ -13,7 +13,7 @@ class StripePaymentType implements PaymentTypeInterface
 
     public function getTitle(): ?string
     {
-        return "Stripe (Blue Card)";
+        return "Carte bleu";
     }
 
     public function getManager(): string

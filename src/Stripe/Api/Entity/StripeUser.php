@@ -32,7 +32,8 @@ class StripeUser extends User
         $this->stripeId = json_decode($stripeId, true);
     }
 
-    public function updateStripeId($stripeId){
+    public function updateStripeId($stripeId)
+    {
         $this->stripeId[$this->getEnvironment()] = $stripeId;
     }
 

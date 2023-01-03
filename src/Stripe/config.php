@@ -6,6 +6,7 @@ use App\Stripe\StripePaymentType;
 use App\Stripe\StripePaymentBoard;
 
 use App\Stripe\StripeSettings;
+use App\Stripe\StripeSubscriber;
 use function DI\add;
 use function DI\autowire;
 use function DI\get;
@@ -16,6 +17,8 @@ return [
     'csrf.except'       => add(['stripe.webhook']),
     'payment.boards'    => add(get(StripePaymentBoard::class)),
     'admin.settings'    => add(get(StripeSettings::class)),
+    'subscribers.list' => add(StripeSubscriber::class),
+
     Stripe::class       => autowire()
         ->constructorParameter('endpointkey', $_ENV['STRIPE_ENDPOINT'] ?? null)
         ->constructorParameter('privateKey', $_ENV['STRIPE_SECRET'] ?? null)

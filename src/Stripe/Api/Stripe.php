@@ -13,6 +13,7 @@ use Stripe\Invoice;
 use Stripe\PaymentIntent;
 use Stripe\Stripe as StripeStripe;
 use Stripe\StripeClient;
+use Stripe\Subscription;
 use Stripe\Webhook;
 
 class Stripe
@@ -94,34 +95,68 @@ class Stripe
         return $this->stripe->paymentIntents->retrieve($id);
     }
 
-    public function createPaymentSession(StripeUser $user, $items, array $urls, Transaction $transaction)
+
+    public function getSubscription(string $subscriptionId): Subscription
+    {
+        return $this->stripe->subscriptions->retrieve($subscriptionId);
+    }
+
+    public function getInvoices(string $subscriptionId)
+    {
+        return $this->stripe->invoices->all(['subscription' => $subscriptionId, 'limit' => 5, 'status' => 'paid']);
+    }
+
+    public function getPaymentMethod(string $paymentmethodid){
+        return $this->stripe->paymentMethods->retrieve($paymentmethodid);
+    }
+
+
+    public function createPaymentSession(StripeUser $user, $items, array $urls, Transaction $transaction, string $mode = 'payment'): Session
     {
         try {
-
-            $session = $this->stripe->checkout->sessions->create([
+            $data = [
+                //'customer_email' => $user->getEmail(),
                 'cancel_url' => $urls['cancel'],
                 'success_url' => $urls['return'],
-                'mode' => 'payment',
-                'payment_method_types' => $this->types,
-                
-                'metadata' => [
-                    'transaction' => $transaction->getId(),
-                    'user' => $user->getId()
+                'mode' => $mode,
+                'payment_method_types' => [
+                    'card',
                 ],
                 'customer' => $user->getStripeId(),
                 'line_items' => $items,
-            ]);
-    
+            ];
+            if ($mode == 'payment'){
+                $data['metadata'] = [
+                    'transaction' => $transaction->getId(),
+                    'user' => $user->getId()
+                ];
+
+                $data['payment_intent_data'] = [
+                    'metadata' => [
+
+                        'transaction' => $transaction->getId(),
+                        'user' => $user->getId()
+                    ],
+                ];
+            } else {
+
+                $data['metadata'] = [
+                    'transaction' => $transaction->getId(),
+                    'user' => $user->getId()
+                ];
+                $data['subscription_data']['metadata'] = [
+                    'transaction' => $transaction->getId(),
+                    'user' => $user->getId()
+                ];
+            }
+            $session = $this->stripe->checkout->sessions->create($data);
+
             return $session;
         } catch (Exception $e){
-			$stripeId = $user->getStripeId();
-            if ("No such customer: '$stripeId'" == $e->getMessage()){
-                $this->createCustomer($user);
-				return $this->createPaymentSession($user, $items, $urls, $transaction);
-            }
-            dd($e->getMessage());
+            die($e->getMessage());
         }
     }
+
 
     public function getCheckoutSessionFromIntent(string $paymentIntent): Session
     {
@@ -193,5 +228,19 @@ class Stripe
     protected function setStripeVersion()
     {
         StripeStripe::setApiVersion(self::STRIPE_VERSION);
+    }
+
+
+    public function cancelSubscription(string $token)
+    {
+        $this->stripe->subscriptions->cancel($token);
+    }
+
+    public function getPaymentMethods(?string $customerId=null)
+    {
+        if ($customerId == null){
+            return [];
+        }
+        return $this->stripe->customers->allPaymentMethods($customerId, ['type' => 'card'])->data;
     }
 }

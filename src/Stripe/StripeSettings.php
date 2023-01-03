@@ -25,7 +25,7 @@ class StripeSettings implements \App\Admin\Settings\SettingsInterface
 
     public function render(RendererInterface $renderer)
     {
-        $types = collect(self::TYPES)->mapWithKeys(function($key){
+        $types = collect(self::TYPES)->mapWithKeys(function ($key) {
             return [$key => $key];
         })->toArray();
         return $renderer->render("@stripe_admin/settings", ['types' => $types]);

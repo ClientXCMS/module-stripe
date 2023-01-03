@@ -3,8 +3,8 @@ namespace App\Stripe\Database;
 
 use ClientX\Database\Table;
 
-
-class StripeTable extends Table {
+class StripeTable extends Table
+{
 
     protected $table = "stripe_transactions";
 
