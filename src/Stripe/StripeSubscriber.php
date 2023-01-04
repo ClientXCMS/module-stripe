@@ -10,7 +10,6 @@ use App\Shop\Entity\Recurring;
 use App\Shop\Entity\SubscriptionDetails;
 use App\Shop\Entity\Transaction;
 use App\Shop\Entity\TransactionItem;
-use App\Shop\Payment\SubscribeInterface;
 use App\Shop\Services\SubscriptionService;
 use App\Stripe\Api\Entity\StripeUser;
 use App\Stripe\Api\Stripe;
@@ -18,7 +17,7 @@ use Carbon\Carbon;
 use ClientX\Database\NoRecordException;
 use ClientX\Renderer\RendererInterface;
 
-class StripeSubscriber implements SubscribeInterface
+class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface
 {
 
     private Stripe $stripe;
@@ -54,23 +53,21 @@ class StripeSubscriber implements SubscribeInterface
         })->first();
         $months = Recurring::from(json_decode($product->getData(), true)['_recurring'])->getMonths();
 
-        $items = collect($transaction->getItems())->map(function (TransactionItem $item) use ($transaction, $months, $discounts) {
-            return [
-                [
-                    'price_data' =>
-                        [
-                            'currency' => $transaction->getCurrency(),
-                            'recurring' => [
-                                'interval_count' => $months,
-                                'interval'  => 'month'
-                            ],
-                            'unit_amount' => number_format($item->priceWithTax() + $discounts, 2) * 100,
-                            'product_data' => ["name" => $item->getName()]
+        $items = [[
+            [
+                'price_data' =>
+                    [
+                        'currency' => $transaction->getCurrency(),
+                        'recurring' => [
+                            'interval_count' => $months,
+                            'interval'  => 'month'
                         ],
-                    'quantity' => $item->getQuantity(),
-                ]
-            ];
-        })->toArray();
+                        'unit_amount' => number_format($product->getPrice(Recurring::from(json_decode($product->getData(), true)['_recurring'])->getName()) + $discounts, 2) * 100,
+                        'product_data' => ["name" => $product->getName()]
+                    ],
+                'quantity' => 1,
+            ]
+        ]];
 
         $user = $this->createStripeUser($user);
         $session = $this->stripe->createPaymentSession($user, $items, $links, $transaction, 'subscription');
@@ -165,9 +162,10 @@ class StripeSubscriber implements SubscribeInterface
             $details = $this->stripe->getSubscription($subscription->token);
             if ($details->status == 'active' && Carbon::createFromTimestamp($details->current_period_end)->format('m') == $currentMonth){
                 $income->addAmount($details->items->data[0]->plan->amount_decimal / 100);
-                $income->addNextRenewal($subscription->token,Carbon::createFromTimestamp(Carbon::createFromTimestamp($details->current_period_end))->toDate());
-                $income->addInterval($subscription->token,$details->items->data[0]->plan->interval_count);
             }
+
+            $income->addNextRenewal($subscription->token,Carbon::createFromTimestamp($details->current_period_end)->toDate());
+            $income->addInterval($subscription->token,$details->items->data[0]->plan->interval_count);
         }
         return $income;
     }
