@@ -119,9 +119,7 @@ class Stripe
                 'cancel_url' => $urls['cancel'],
                 'success_url' => $urls['return'],
                 'mode' => $mode,
-                'payment_method_types' => [
-                    'card',
-                ],
+                'payment_method_types' => $this->types,
                 'customer' => $user->getStripeId(),
                 'line_items' => $items,
             ];
