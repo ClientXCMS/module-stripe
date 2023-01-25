@@ -21,15 +21,22 @@ class StripeUser extends User
 
     public function setStripeId($stripeId)
     {
-        $json = json_decode($stripeId);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $stripeId = json_encode([
-                $this->getEnvironment() => $stripeId,
-                $this->getReversedEnvironment() => null,
-            ]);
-        }
+        if ($stripeId != null){
+            $json = json_decode($stripeId);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $stripeId = json_encode([
+                    $this->getEnvironment() => $stripeId,
+                    $this->getReversedEnvironment() => null,
+                ]);
+            }
 
-        $this->stripeId = json_decode($stripeId, true);
+            $this->stripeId = json_decode($stripeId, true);
+        } else {
+            $this->stripeId = [
+            'test'=> null,
+            'live' => null,
+            ];
+        }
     }
 
     public function updateStripeId($stripeId)
