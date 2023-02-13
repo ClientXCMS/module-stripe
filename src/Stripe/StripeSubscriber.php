@@ -117,8 +117,11 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface
 
     public function fetchLastTransactionId(string $token, string $last): ?string
     {
-
-        if ($last == current($this->stripe->getInvoices($token)->lines->data)->id){
+        $data = $this->stripe->getInvoices($token)->lines->data;
+        if ($data == null){
+            return null;
+        }
+        if ($last == current($data)->id){
             return null;
         }
         return current($this->stripe->getInvoices($token)->lines->data)->id;
