@@ -194,14 +194,20 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         $id = $object->id;
         $transaction->setTransactionId($id);
         $user = (new User())->setId($object->metadata->user);
-        $this->subscriptionService->addSubscription($user, $transaction->getItems()[0], $object->id, 'stripe');
-        $this->service->updateTransactionId($transaction);
-        $transaction->setState($transaction::COMPLETED);
-        $this->service->complete($transaction);
+        if ($object->status == "active") {
+            $this->subscriptionService->addSubscription($user, $transaction->getItems()[0], $object->id, 'stripe');
+            $this->service->updateTransactionId($transaction);
+            $transaction->setState($transaction::COMPLETED);
+            $this->service->complete($transaction);
 
-        foreach ($transaction->getItems() as $item) {
-            $this->service->delivre($item);
+            foreach ($transaction->getItems() as $item) {
+                $this->service->delivre($item);
+            }
+        } else {
+            $this->service->updateTransactionId($transaction);
+            $transaction->setState($transaction::REFUSED);
         }
+            
         $this->service->changeState($transaction);
         return $transaction;
     }
