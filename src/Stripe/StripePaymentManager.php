@@ -127,9 +127,9 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         $params = $request->getServerParams();
         $signature = $params["HTTP_STRIPE_SIGNATURE"];
         $webhook = $this->stripe->getWebhook($signature);
-        if (!in_array($webhook->type, ['checkout.session.completed', 'customer.subscription.created', 'checkout.session.async_payment_failed', 'customer.created', 'customer.deleted'])) {
+        /*if (!in_array($webhook->type, ['checkout.session.completed', 'customer.subscription.created', 'checkout.session.async_payment_failed', 'customer.created', 'customer.deleted', 'customer.subscription.deleted'])) {
             return null;
-        }
+        }*/
 
         if (isset($webhook->data->object)) {
 
@@ -147,10 +147,16 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             if ($webhook->type === 'checkout.session.completed') {
                 return $this->completePayment($webhook);
             }
-            if ($webhook->type == 'customer.subscription.created') {
-                return $this->createSubscription($webhook);
+            
+            if ($webhook->type == 'customer.subscription.updated') {
+                return $this->updatedSubscription($webhook);
+            }
+            
+            if ($webhook->type == 'customer.subscription.deleted') {
+                return $this->deleteSubscription($webhook);
             }
         }
+        return null;
     }
 
     private function completePayment(\Stripe\Event $webhook)
@@ -183,7 +189,8 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         }
     }
 
-    private function createSubscription(Event $webhook)
+    
+    private function updateSubscription(Event $webhook)
     {
         $object = $webhook->data->object;
         $id = $object->metadata->transaction ?? 0;
@@ -212,6 +219,17 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         return $transaction;
     }
 
+    
+    private function deleteSubscription(Event $webhook)
+    {
+
+        $object = $webhook->data->object;
+        $id = $object->metadata->transaction ?? 0;
+        $transaction = $this->service->findTransaction($id);
+        $id = $object->id;
+        $this->subscriptionService->cancel($id);
+        return $transaction;
+    }
     public function getWebhook(string $signature): Event
     {
         return $this->stripe->getWebhook($signature);
