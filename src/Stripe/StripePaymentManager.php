@@ -149,7 +149,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             }
             
             if ($webhook->type == 'customer.subscription.updated') {
-                return $this->updatedSubscription($webhook);
+                return $this->updateSubscription($webhook);
             }
             
             if ($webhook->type == 'customer.subscription.deleted') {
