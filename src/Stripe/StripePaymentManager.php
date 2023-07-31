@@ -77,7 +77,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
                     'price_data' =>
                         [
                             'currency' => $transaction->getCurrency(),
-                            'unit_amount' => ($item->priceWithTax() + $discount) * 100,
+                            'unit_amount' => ($item->price() + $discount) * 100,
                             'product_data' => ["name" => $item->getName()]
                         ],
                     'quantity' => $item->getQuantity(),
@@ -147,11 +147,11 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             if ($webhook->type === 'checkout.session.completed') {
                 return $this->completePayment($webhook);
             }
-            
+
             if ($webhook->type == 'customer.subscription.updated') {
                 return $this->updateSubscription($webhook);
             }
-            
+
             if ($webhook->type == 'customer.subscription.deleted') {
                 return $this->deleteSubscription($webhook);
             }
@@ -177,7 +177,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
             $this->service->setReason($transaction);
 
             return $transaction;
-        } else {
+        } elseif ($object->mode != 'subscription'){
             $transaction->setState($transaction::COMPLETED);
             $this->service->complete($transaction);
 
@@ -189,7 +189,7 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         }
     }
 
-    
+
     private function updateSubscription(Event $webhook)
     {
         $object = $webhook->data->object;
@@ -202,27 +202,45 @@ class StripePaymentManager extends AbstractPaymentManager implements PaymentMana
         $transaction->setTransactionId($id);
         $user = (new User())->setId($object->metadata->user);
         if ($object->status == "active") {
-            $this->subscriptionService->addSubscription($user, $transaction->getItems()[0], $object->id, 'stripe');
+            if (property_exists($object, 'previous_attributes')){
+                if (property_exists($object->previous_attributes, 'status')){
+                    if ($object->previous_attributes->status == "incomplete"){
+                        $this->subscriptionService->addSubscription($user, $transaction, $object->id, 'stripe');
+                    }
+                }
+            } else {
+                // on récup la transaction qui faut renouveller
+                $id = $this->subscriptionService->findTransactionShouldRenew($object->id);
+                if ($id == null){
+                    return null;
+                }
+                $transaction = $this->service->findTransaction($id);
+                $transaction->setTransactionId($object->latest_invoice);
+                $this->subscriptionService->updateRenewal($this->subscriptionService->findByToken($object->id)->id, $object->latest_invoice, $id);
+            }
             $this->service->updateTransactionId($transaction);
+            $this->service->updatePaymentType('stripe', $id);
             $transaction->setState($transaction::COMPLETED);
             $this->service->complete($transaction);
 
             foreach ($transaction->getItems() as $item) {
                 $this->service->delivre($item);
             }
+        } elseif ($object->cancel_at != null) {
+            return $this->deleteSubscription($webhook);
         } else {
+
             $this->service->updateTransactionId($transaction);
             $transaction->setState($transaction::REFUSED);
         }
-            
+
         $this->service->changeState($transaction);
         return $transaction;
     }
 
-    
+
     private function deleteSubscription(Event $webhook)
     {
-
         $object = $webhook->data->object;
         $id = $object->metadata->transaction ?? 0;
         $transaction = $this->service->findTransaction($id);

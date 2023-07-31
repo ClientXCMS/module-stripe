@@ -241,4 +241,20 @@ class Stripe
         }
         return $this->stripe->customers->allPaymentMethods($customerId, ['type' => 'card'])->data;
     }
+
+    /**
+     * @return StripeClient
+     */
+    public function getStripe(): StripeClient
+    {
+        return $this->stripe;
+    }
+
+    /**
+     * @return array
+     */
+    public function getTypes(): array
+    {
+        return $this->types;
+    }
 }
