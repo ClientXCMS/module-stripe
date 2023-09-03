@@ -169,7 +169,7 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface, EntitySu
 
     public function getDetailsLink(string $token): string
     {
-        return "https://dashboard.stripe.com/test/subscriptions/$token";
+        return "https://dashboard.stripe.com/live/subscriptions/$token";
     }
 
     public function estimatedIncomeSubscription(int $months = 0): IncomeSubscriptionDetails
@@ -184,7 +184,7 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface, EntitySu
                 $income->addAmount($details->items->data[0]->plan->amount_decimal / 100);
             }
 
-            $income->addNextRenewal($subscription->token,Carbon::createFromTimestamp($details->current_period_end)->toDate());
+            $income->addNextRenewal($subscription->getToken(),Carbon::createFromTimestamp($details->current_period_end)->toDate());
             $income->addInterval($subscription->getToken(),$details->items->data[0]->plan->interval_count);
         }
         return $income;
