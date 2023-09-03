@@ -185,7 +185,7 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface, EntitySu
             }
 
             $income->addNextRenewal($subscription->token,Carbon::createFromTimestamp($details->current_period_end)->toDate());
-            $income->addInterval($subscription->token,$details->items->data[0]->plan->interval_count);
+            $income->addInterval($subscription->getToken(),$details->items->data[0]->plan->interval_count);
         }
         return $income;
     }
