@@ -179,7 +179,7 @@ class StripeSubscriber implements \App\Shop\Payment\SubscribeInterface, EntitySu
         $subscriptions = $this->subscriptionService->getSubscriptionForType('stripe');
         $currentMonth = Carbon::now()->addMonths($months)->format('m');
         foreach ($subscriptions as $subscription){
-            $details = $this->stripe->getSubscription($subscription->token);
+            $details = $this->stripe->getSubscription($subscription->getToken());
             if ($details->status == 'active' && Carbon::createFromTimestamp($details->current_period_end)->format('m') == $currentMonth){
                 $income->addAmount($details->items->data[0]->plan->amount_decimal / 100);
             }
