@@ -42,7 +42,7 @@ class Stripe
      */
     private $endpointkey;
 
-    const STRIPE_VERSION = "2020-08-27";
+    const STRIPE_VERSION = "2023-08-16";
     private array $types;
 
     public function __construct($privateKey, $publicKey, $endpointkey, LoggerInterface $logger, string $types)
